@@ -11,115 +11,232 @@
 <body class="bg-gray-100 p-4">
   <div id="root"></div>
 
-  <script type="text/babel">
+  <script type="text/babel" data-presets="typescript,react">
     const { useState, useEffect } = React;
-    const defaultFee = 5;
+
+    type Person = {
+      id: number;
+      name: string;
+      billable: string;
+      fee: string;
+    };
+
+    type Team = {
+      id: number;
+      name: string;
+      fee: string;
+      people: Person[];
+    };
+
+    function useToast() {
+      const [toast, setToast] = useState<string | null>(null);
+      const show = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3000);
+      };
+      return { toast, show };
+    }
 
     function App() {
-      const [teams, setTeams] = useState(() => {
+      const [teams, setTeams] = useState<Team[]>(() => {
         const saved = localStorage.getItem('teams');
         return saved ? JSON.parse(saved) : [];
       });
+
+      const [globalFee, setGlobalFee] = useState<number>(() => {
+        const saved = localStorage.getItem('globalFee');
+        return saved ? Number(saved) : 5;
+      });
+
+      const [query, setQuery] = useState('');
+      const { toast, show } = useToast();
 
       useEffect(() => {
         localStorage.setItem('teams', JSON.stringify(teams));
       }, [teams]);
 
+      useEffect(() => {
+        localStorage.setItem('globalFee', String(globalFee));
+      }, [globalFee]);
+
       const totalPeople = teams.reduce((sum, t) => sum + t.people.length, 0);
       const totalFees = teams.reduce((sum, t) => {
         return sum + t.people.reduce((ps, p) => {
-          const feePerc = p.fee !== '' && p.fee != null ? Number(p.fee) : (t.fee !== '' && t.fee != null ? Number(t.fee) : defaultFee);
-          return ps + Number(p.billable) * feePerc / 100;
+          const feePerc =
+            p.fee !== '' && p.fee != null ? Number(p.fee) :
+            t.fee !== '' && t.fee != null ? Number(t.fee) : globalFee;
+          const billable = Number(p.billable) || 0;
+          return ps + billable * feePerc / 100;
         }, 0);
       }, 0);
 
-      const [newTeam, setNewTeam] = useState({ name: '', fee: '' });
+      const [newTeam, setNewTeam] = useState<{ name: string; fee: string }>({ name: '', fee: '' });
 
-      const addTeam = e => {
+      const addTeam = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTeam.name.trim()) return;
         setTeams([...teams, { id: Date.now(), name: newTeam.name, fee: newTeam.fee, people: [] }]);
         setNewTeam({ name: '', fee: '' });
+        show('Team added');
       };
 
-      const deleteTeam = id => {
+      const deleteTeam = (id: number) => {
         setTeams(teams.filter(t => t.id !== id));
+        show('Team deleted');
       };
 
-      const updateTeam = (id, updated) => {
+      const updateTeam = (id: number, updated: Partial<Team>) => {
         setTeams(teams.map(t => t.id === id ? { ...t, ...updated } : t));
+        show('Team updated');
       };
 
-      const addPerson = (teamId, person) => {
+      const addPerson = (teamId: number, person: Person) => {
         setTeams(teams.map(t => t.id === teamId ? { ...t, people: [...t.people, person] } : t));
+        show('Person added');
       };
 
-      const updatePerson = (teamId, personId, updated) => {
-        setTeams(teams.map(t => t.id === teamId ? { ...t, people: t.people.map(p => p.id === personId ? { ...p, ...updated } : p) } : t));
+      const updatePerson = (teamId: number, personId: number, updated: Partial<Person>) => {
+        setTeams(teams.map(t => t.id === teamId ? {
+          ...t,
+          people: t.people.map(p => p.id === personId ? { ...p, ...updated } : p)
+        } : t));
+        show('Person updated');
       };
 
-      const deletePerson = (teamId, personId) => {
-        setTeams(teams.map(t => t.id === teamId ? { ...t, people: t.people.filter(p => p.id !== personId) } : t));
+      const deletePerson = (teamId: number, personId: number) => {
+        setTeams(teams.map(t => t.id === teamId ? {
+          ...t,
+          people: t.people.filter(p => p.id !== personId)
+        } : t));
+        show('Person deleted');
       };
+
+      const exportData = () => {
+        const data = JSON.stringify({ globalFee, teams });
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'teams.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        show('Exported');
+      };
+
+      const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result as string);
+            if (typeof data.globalFee === 'number' && Array.isArray(data.teams)) {
+              setGlobalFee(data.globalFee);
+              setTeams(data.teams);
+              show('Imported');
+            } else {
+              show('Invalid file');
+            }
+          } catch {
+            show('Invalid file');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      const filteredTeams = teams.filter(t => {
+        const q = query.toLowerCase();
+        return t.name.toLowerCase().includes(q) || t.people.some(p => p.name.toLowerCase().includes(q));
+      });
 
       return (
         <div className="max-w-3xl mx-auto">
+          {toast && <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow">{toast}</div>}
           <h1 className="text-2xl font-bold mb-4">Team &amp; Management Fee Tracker</h1>
           <div className="mb-6 p-4 bg-white rounded shadow">
             <p>Total People Managed: <span className="font-semibold">{totalPeople}</span></p>
             <p>Total Fee Sum: <span className="font-semibold">${totalFees.toFixed(2)}</span></p>
           </div>
 
+          <div className="mb-4 bg-white p-4 rounded shadow flex items-center gap-2">
+            <label className="font-semibold">Global Default Fee %:</label>
+            <input className="border p-2 w-24" type="number" min="0" value={globalFee} onChange={e => setGlobalFee(Number(e.target.value))} />
+          </div>
+
+          <div className="mb-4 flex flex-col sm:flex-row gap-2">
+            <input className="border p-2 flex-1" placeholder="Search..." value={query} onChange={e => setQuery(e.target.value)} />
+            <button type="button" className="border px-4 py-2 rounded bg-white" onClick={exportData}>Export</button>
+            <label className="border px-4 py-2 rounded bg-white cursor-pointer text-center">
+              Import
+              <input type="file" accept="application/json" className="hidden" onChange={importData} />
+            </label>
+          </div>
+
           <form onSubmit={addTeam} className="mb-8 bg-white p-4 rounded shadow">
             <h2 className="text-xl font-semibold mb-2">Add Team</h2>
             <div className="flex flex-col sm:flex-row gap-2">
               <input className="border p-2 flex-1" placeholder="Team Name" value={newTeam.name} onChange={e => setNewTeam({ ...newTeam, name: e.target.value })} />
-              <input className="border p-2 w-32" type="number" min="0" placeholder={`Fee % (default ${defaultFee})`} value={newTeam.fee} onChange={e => setNewTeam({ ...newTeam, fee: e.target.value })} />
+              <input className="border p-2 w-32" type="number" min="0" placeholder={`Fee % (default ${globalFee})`} value={newTeam.fee} onChange={e => setNewTeam({ ...newTeam, fee: e.target.value })} />
               <button className="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
             </div>
           </form>
 
-          {teams.map(team => (
+          {filteredTeams.map(team => (
             <Team
               key={team.id}
               team={team}
-              defaultFee={defaultFee}
+              defaultFee={globalFee}
               onDelete={() => deleteTeam(team.id)}
               onUpdate={updated => updateTeam(team.id, updated)}
               onAddPerson={person => addPerson(team.id, person)}
               onUpdatePerson={(pid, upd) => updatePerson(team.id, pid, upd)}
               onDeletePerson={pid => deletePerson(team.id, pid)}
+              query={query}
             />
           ))}
         </div>
       );
     }
 
-    function Team({ team, defaultFee, onDelete, onUpdate, onAddPerson, onUpdatePerson, onDeletePerson }) {
-      const [editing, setEditing] = useState(false);
-      const [form, setForm] = useState({ name: team.name, fee: team.fee ?? '' });
-      const [personForm, setPersonForm] = useState({ name: '', billable: '', fee: '' });
-      const [editingPersonId, setEditingPersonId] = useState(null);
-      const [editPersonForm, setEditPersonForm] = useState({ name: '', billable: '', fee: '' });
+    type TeamProps = {
+      team: Team;
+      defaultFee: number;
+      onDelete: () => void;
+      onUpdate: (updated: Partial<Team>) => void;
+      onAddPerson: (person: Person) => void;
+      onUpdatePerson: (personId: number, updated: Partial<Person>) => void;
+      onDeletePerson: (personId: number) => void;
+      query: string;
+    };
 
-      const submitEdit = e => {
+    function Team({ team, defaultFee, onDelete, onUpdate, onAddPerson, onUpdatePerson, onDeletePerson, query }: TeamProps) {
+      const [editing, setEditing] = useState(false);
+      const [form, setForm] = useState<{ name: string; fee: string }>({ name: team.name, fee: team.fee ?? '' });
+      const [personForm, setPersonForm] = useState<Person>({ id: 0, name: '', billable: '', fee: '' });
+      const [editingPersonId, setEditingPersonId] = useState<number | null>(null);
+      const [editPersonForm, setEditPersonForm] = useState<Person>({ id: 0, name: '', billable: '', fee: '' });
+
+      const submitEdit = (e: React.FormEvent) => {
         e.preventDefault();
         onUpdate({ name: form.name, fee: form.fee });
         setEditing(false);
       };
 
-      const submitPerson = e => {
+      const submitPerson = (e: React.FormEvent) => {
         e.preventDefault();
         if (!personForm.name.trim()) return;
         onAddPerson({ id: Date.now(), ...personForm });
-        setPersonForm({ name: '', billable: '', fee: '' });
+        setPersonForm({ id: 0, name: '', billable: '', fee: '' });
       };
 
-      const submitPersonEdit = e => {
+      const submitPersonEdit = (e: React.FormEvent) => {
         e.preventDefault();
-        onUpdatePerson(editingPersonId, editPersonForm);
+        onUpdatePerson(editingPersonId!, editPersonForm);
         setEditingPersonId(null);
       };
+
+      const visiblePeople = team.people.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
 
       return (
         <div className="mb-8 bg-white p-4 rounded shadow">
@@ -144,16 +261,18 @@
           )}
 
           <ul className="mb-4">
-            {team.people.map(p => {
-              const feePerc = p.fee !== '' && p.fee != null ? Number(p.fee) : (team.fee !== '' && team.fee != null ? Number(team.fee) : defaultFee);
-              const feeAmount = Number(p.billable) * feePerc / 100;
+            {visiblePeople.map(p => {
+              const feePerc =
+                p.fee !== '' && p.fee != null ? Number(p.fee) :
+                team.fee !== '' && team.fee != null ? Number(team.fee) : defaultFee;
+              const feeAmount = (Number(p.billable) || 0) * feePerc / 100;
               return (
                 <li key={p.id} className="border-b py-2">
                   {editingPersonId === p.id ? (
                     <form onSubmit={submitPersonEdit} className="flex flex-col sm:flex-row gap-2">
                       <input className="border p-2 flex-1" value={editPersonForm.name} onChange={e => setEditPersonForm({ ...editPersonForm, name: e.target.value })} />
                       <input className="border p-2 w-32" type="number" min="0" value={editPersonForm.billable} onChange={e => setEditPersonForm({ ...editPersonForm, billable: e.target.value })} placeholder="Billable" />
-                      <input className="border p-2 w-28" type="number" min="0" value={editPersonForm.fee} onChange={e => setEditPersonForm({ ...editPersonForm, fee: e.target.value })} placeholder={`Fee %`} />
+                      <input className="border p-2 w-28" type="number" min="0" value={editPersonForm.fee} onChange={e => setEditPersonForm({ ...editPersonForm, fee: e.target.value })} placeholder="Fee %" />
                       <button className="bg-green-500 text-white px-3 py-2 rounded">Save</button>
                       <button type="button" className="bg-gray-300 px-3 py-2 rounded" onClick={() => setEditingPersonId(null)}>Cancel</button>
                     </form>
@@ -164,7 +283,7 @@
                         <p className="text-sm text-gray-600">Billable: ${p.billable} | Fee %: {p.fee !== '' && p.fee != null ? p.fee : team.fee !== '' && team.fee != null ? team.fee : defaultFee} | Fee: ${feeAmount.toFixed(2)}</p>
                       </div>
                       <div className="space-x-2">
-                        <button className="px-2 py-1 bg-yellow-400 rounded" onClick={() => {setEditingPersonId(p.id); setEditPersonForm({ name: p.name, billable: p.billable, fee: p.fee ?? '' });}}>Edit</button>
+                        <button className="px-2 py-1 bg-yellow-400 rounded" onClick={() => { setEditingPersonId(p.id); setEditPersonForm({ ...p }); }}>Edit</button>
                         <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={() => onDeletePerson(p.id)}>Delete</button>
                       </div>
                     </div>
@@ -177,14 +296,14 @@
           <form onSubmit={submitPerson} className="flex flex-col sm:flex-row gap-2">
             <input className="border p-2 flex-1" placeholder="Person Name" value={personForm.name} onChange={e => setPersonForm({ ...personForm, name: e.target.value })} />
             <input className="border p-2 w-32" type="number" min="0" placeholder="Billable" value={personForm.billable} onChange={e => setPersonForm({ ...personForm, billable: e.target.value })} />
-            <input className="border p-2 w-28" type="number" min="0" placeholder={`Fee %`} value={personForm.fee} onChange={e => setPersonForm({ ...personForm, fee: e.target.value })} />
+            <input className="border p-2 w-28" type="number" min="0" placeholder="Fee %" value={personForm.fee} onChange={e => setPersonForm({ ...personForm, fee: e.target.value })} />
             <button className="bg-blue-500 text-white px-4 py-2 rounded">Add Person</button>
           </form>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
   </script>
 </body>
 </html>
