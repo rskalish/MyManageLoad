@@ -1,0 +1,14 @@
+{
+  "name": "mymanageload",
+  "version": "1.0.0",
+  "description": "Simple Node web app template",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -v"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
