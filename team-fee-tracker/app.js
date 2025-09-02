@@ -1,11 +1,11 @@
 const { useState, useEffect } = React;
 
 function Nav({ view, setView }) {
-  return React.createElement('div', { className: 'space-x-2' }, [
+  return React.createElement('div', { className: 'space-x-2 mb-4' }, [
     React.createElement(
       'button',
       {
-        className: `px-2 py-1 ${view === 'teams' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
+        className: `px-2 py-1 rounded ${view === 'teams' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
         onClick: () => setView('teams')
       },
       'Teams'
@@ -13,7 +13,7 @@ function Nav({ view, setView }) {
     React.createElement(
       'button',
       {
-        className: `px-2 py-1 ${view === 'people' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
+        className: `px-2 py-1 rounded ${view === 'people' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
         onClick: () => setView('people')
       },
       'People'
@@ -21,7 +21,7 @@ function Nav({ view, setView }) {
     React.createElement(
       'button',
       {
-        className: `px-2 py-1 ${view === 'summary' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
+        className: `px-2 py-1 rounded ${view === 'summary' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`,
         onClick: () => setView('summary')
       },
       'Summary'
@@ -29,44 +29,31 @@ function Nav({ view, setView }) {
   ]);
 }
 
-function SummaryBar({ people, teams, globalFee }) {
-  const teamFees = {};
-  teams.forEach(t => {
-    if (t.fee !== undefined) teamFees[t.id] = t.fee;
-  });
-  let total = 0;
-  people.forEach(p => {
-    const feePercent = p.fee !== undefined ? p.fee : teamFees[p.teamId] !== undefined ? teamFees[p.teamId] : globalFee;
-    const billable = parseFloat(p.billable) || 0;
-    total += billable * feePercent / 100;
-  });
+function SummaryBar({ people, globalFee }) {
   return React.createElement(
     'div',
-    { className: 'p-2 bg-gray-100 mt-4' },
-    `Total People: ${people.length} | Total Management Fee: $${total.toFixed(2)}`
+    { className: 'p-4 bg-gray-100 rounded mt-4' },
+    `Total People: ${people.length} | Global Fee: ${globalFee}%`
   );
 }
 
 function TeamsPanel({ teams, setTeams, people, setPeople }) {
   const [name, setName] = useState('');
-  const [fee, setFee] = useState('');
   const [editId, setEditId] = useState(null);
 
   const submit = () => {
     if (!name.trim()) return;
     if (editId) {
-      setTeams(teams.map(t => t.id === editId ? { ...t, name, fee: fee ? parseFloat(fee) : undefined } : t));
+      setTeams(teams.map(t => t.id === editId ? { ...t, name } : t));
     } else {
-      setTeams([...teams, { id: Date.now().toString(), name, fee: fee ? parseFloat(fee) : undefined }]);
+      setTeams([...teams, { id: Date.now().toString(), name }]);
     }
     setName('');
-    setFee('');
     setEditId(null);
   };
 
   const edit = t => {
     setName(t.name);
-    setFee(t.fee !== undefined ? t.fee : '');
     setEditId(t.id);
   };
 
@@ -77,7 +64,6 @@ function TeamsPanel({ teams, setTeams, people, setPeople }) {
 
   const cancel = () => {
     setName('');
-    setFee('');
     setEditId(null);
   };
 
@@ -90,22 +76,15 @@ function TeamsPanel({ teams, setTeams, people, setPeople }) {
         value: name,
         onChange: e => setName(e.target.value)
       }),
-      React.createElement('input', {
-        className: 'border p-1 mr-2 w-24',
-        placeholder: 'Fee %',
-        type: 'number',
-        value: fee,
-        onChange: e => setFee(e.target.value)
-      }),
       React.createElement(
         'button',
-        { className: 'bg-blue-500 text-white px-2 py-1 mr-2', onClick: submit },
+        { className: 'bg-blue-500 text-white px-2 py-1 mr-2 rounded', onClick: submit },
         editId ? 'Save' : 'Add'
       ),
       editId
         ? React.createElement(
             'button',
-            { className: 'bg-gray-300 px-2 py-1', onClick: cancel },
+            { className: 'bg-gray-300 px-2 py-1 rounded', onClick: cancel },
             'Cancel'
           )
         : null
@@ -118,16 +97,16 @@ function TeamsPanel({ teams, setTeams, people, setPeople }) {
           React.createElement(
             'span',
             { className: 'mr-2' },
-            `${t.name} ${t.fee !== undefined ? '(' + t.fee + '%)' : ''}`
+            `${t.name}`
           ),
           React.createElement(
             'button',
-            { className: 'bg-yellow-500 text-white px-2 py-1 mr-1', onClick: () => edit(t) },
+            { className: 'bg-yellow-500 text-white px-2 py-1 mr-1 rounded', onClick: () => edit(t) },
             'Edit'
           ),
           React.createElement(
             'button',
-            { className: 'bg-red-500 text-white px-2 py-1', onClick: () => remove(t.id) },
+            { className: 'bg-red-500 text-white px-2 py-1 rounded', onClick: () => remove(t.id) },
             'Delete'
           )
         ])
@@ -138,26 +117,23 @@ function TeamsPanel({ teams, setTeams, people, setPeople }) {
 
 function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeamId }) {
   const [name, setName] = useState('');
-  const [billable, setBillable] = useState('');
   const [fee, setFee] = useState('');
   const [editId, setEditId] = useState(null);
 
   const submit = () => {
     if (!name.trim() || !selectedTeamId) return;
     if (editId) {
-      setPeople(people.map(p => p.id === editId ? { ...p, name, billable, fee: fee ? parseFloat(fee) : undefined } : p));
+      setPeople(people.map(p => p.id === editId ? { ...p, name, fee: fee ? parseFloat(fee) : undefined } : p));
     } else {
-      setPeople([...people, { id: Date.now().toString(), teamId: selectedTeamId, name, billable, fee: fee ? parseFloat(fee) : undefined }]);
+      setPeople([...people, { id: Date.now().toString(), teamId: selectedTeamId, name, fee: fee ? parseFloat(fee) : undefined }]);
     }
     setName('');
-    setBillable('');
     setFee('');
     setEditId(null);
   };
 
   const edit = p => {
     setName(p.name);
-    setBillable(p.billable);
     setFee(p.fee !== undefined ? p.fee : '');
     setEditId(p.id);
   };
@@ -168,7 +144,6 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
 
   const cancel = () => {
     setName('');
-    setBillable('');
     setFee('');
     setEditId(null);
   };
@@ -202,13 +177,6 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
           }),
           React.createElement('input', {
             className: 'border p-1 mr-2 w-24',
-            placeholder: 'Billable',
-            type: 'number',
-            value: billable,
-            onChange: e => setBillable(e.target.value)
-          }),
-          React.createElement('input', {
-            className: 'border p-1 mr-2 w-24',
             placeholder: 'Fee %',
             type: 'number',
             value: fee,
@@ -216,13 +184,13 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
           }),
           React.createElement(
             'button',
-            { className: 'bg-blue-500 text-white px-2 py-1 mr-2', onClick: submit },
+            { className: 'bg-blue-500 text-white px-2 py-1 mr-2 rounded', onClick: submit },
             editId ? 'Save' : 'Add'
           ),
           editId
             ? React.createElement(
                 'button',
-                { className: 'bg-gray-300 px-2 py-1', onClick: cancel },
+                { className: 'bg-gray-300 px-2 py-1 rounded', onClick: cancel },
                 'Cancel'
               )
             : null
@@ -237,16 +205,16 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
               React.createElement(
                 'span',
                 { className: 'mr-2' },
-                `${p.name} ${p.billable ? '$' + p.billable : ''} ${p.fee !== undefined ? '(' + p.fee + '%)' : ''}`
+                `${p.name} ${p.fee !== undefined ? '(' + p.fee + '%)' : ''}`
               ),
               React.createElement(
                 'button',
-                { className: 'bg-yellow-500 text-white px-2 py-1 mr-1', onClick: () => edit(p) },
+                { className: 'bg-yellow-500 text-white px-2 py-1 mr-1 rounded', onClick: () => edit(p) },
                 'Edit'
               ),
               React.createElement(
                 'button',
-                { className: 'bg-red-500 text-white px-2 py-1', onClick: () => remove(p.id) },
+                { className: 'bg-red-500 text-white px-2 py-1 rounded', onClick: () => remove(p.id) },
                 'Delete'
               )
             ])
@@ -256,29 +224,12 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
   ]);
 }
 
-function SummaryPanel({ globalFee, setGlobalFee }) {
-  const [feeInput, setFeeInput] = useState(globalFee);
-
-  const save = () => {
-    const val = parseFloat(feeInput);
-    if (!isNaN(val)) setGlobalFee(val);
-  };
-
+function SummaryPanel({ globalFee }) {
   return React.createElement('div', { className: 'mt-4' }, [
     React.createElement('h2', { className: 'text-xl mb-2' }, 'Settings'),
     React.createElement('div', null, [
       React.createElement('label', { className: 'mr-2' }, 'Global Fee %:'),
-      React.createElement('input', {
-        className: 'border p-1 mr-2 w-24',
-        type: 'number',
-        value: feeInput,
-        onChange: e => setFeeInput(e.target.value)
-      }),
-      React.createElement(
-        'button',
-        { className: 'bg-blue-500 text-white px-2 py-1', onClick: save },
-        'Save'
-      )
+      React.createElement('span', { className: 'font-semibold' }, `${globalFee}%`)
     ])
   ]);
 }
@@ -286,17 +237,18 @@ function SummaryPanel({ globalFee, setGlobalFee }) {
 function App() {
   const [teams, setTeams] = useState([]);
   const [people, setPeople] = useState([]);
-  const [globalFee, setGlobalFee] = useState(5);
+  const [globalFee] = useState(() => {
+    const g = parseFloat(localStorage.getItem('globalFee'));
+    return !isNaN(g) ? g : 5;
+  });
   const [view, setView] = useState('teams');
   const [selectedTeamId, setSelectedTeamId] = useState('');
 
   useEffect(() => {
     const t = JSON.parse(localStorage.getItem('teams') || '[]');
     const p = JSON.parse(localStorage.getItem('people') || '[]');
-    const g = parseFloat(localStorage.getItem('globalFee'));
     setTeams(t);
     setPeople(p);
-    if (!isNaN(g)) setGlobalFee(g); else setGlobalFee(5);
   }, []);
 
   useEffect(() => {
@@ -307,13 +259,9 @@ function App() {
     localStorage.setItem('people', JSON.stringify(people));
   }, [people]);
 
-  useEffect(() => {
-    localStorage.setItem('globalFee', globalFee);
-  }, [globalFee]);
-
-  return React.createElement('div', null, [
+  return React.createElement('div', { className: 'max-w-2xl mx-auto bg-white p-4 rounded shadow' }, [
     React.createElement(Nav, { view, setView }),
-    React.createElement(SummaryBar, { people, teams, globalFee }),
+    React.createElement(SummaryBar, { people, globalFee }),
     view === 'teams'
       ? React.createElement(TeamsPanel, { teams, setTeams, people, setPeople })
       : null,
@@ -327,7 +275,7 @@ function App() {
         })
       : null,
     view === 'summary'
-      ? React.createElement(SummaryPanel, { globalFee, setGlobalFee })
+      ? React.createElement(SummaryPanel, { globalFee })
       : null
   ]);
 }
