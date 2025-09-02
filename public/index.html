@@ -38,15 +38,17 @@
     }
 
     function App() {
-      const [teams, setTeams] = useState<Team[]>(() => {
+      const initTeams = (): Team[] => {
         const saved = localStorage.getItem('teams');
         return saved ? JSON.parse(saved) : [];
-      });
+      };
+      const [teams, setTeams] = useState(initTeams);
 
-      const [globalFee, setGlobalFee] = useState<number>(() => {
+      const initGlobalFee = (): number => {
         const saved = localStorage.getItem('globalFee');
         return saved ? Number(saved) : 5;
-      });
+      };
+      const [globalFee, setGlobalFee] = useState(initGlobalFee);
 
       const [query, setQuery] = useState('');
       const { toast, show } = useToast();
