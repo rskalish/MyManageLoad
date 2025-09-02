@@ -29,7 +29,7 @@
     };
 
     function useToast() {
-      const [toast, setToast] = useState<string | null>(null);
+      const [toast, setToast] = useState(null as string | null);
       const show = (msg: string) => {
         setToast(msg);
         setTimeout(() => setToast(null), 3000);
@@ -72,7 +72,7 @@
         }, 0);
       }, 0);
 
-      const [newTeam, setNewTeam] = useState<{ name: string; fee: string }>({ name: '', fee: '' });
+      const [newTeam, setNewTeam] = useState({ name: '', fee: '' } as { name: string; fee: string });
 
       const addTeam = (e: React.FormEvent) => {
         e.preventDefault();
@@ -214,10 +214,10 @@
 
     function Team({ team, defaultFee, onDelete, onUpdate, onAddPerson, onUpdatePerson, onDeletePerson, query }: TeamProps) {
       const [editing, setEditing] = useState(false);
-      const [form, setForm] = useState<{ name: string; fee: string }>({ name: team.name, fee: team.fee ?? '' });
-      const [personForm, setPersonForm] = useState<Person>({ id: 0, name: '', billable: '', fee: '' });
-      const [editingPersonId, setEditingPersonId] = useState<number | null>(null);
-      const [editPersonForm, setEditPersonForm] = useState<Person>({ id: 0, name: '', billable: '', fee: '' });
+      const [form, setForm] = useState({ name: team.name, fee: team.fee ?? '' } as { name: string; fee: string });
+      const [personForm, setPersonForm] = useState({ id: 0, name: '', billable: '', fee: '' } as Person);
+      const [editingPersonId, setEditingPersonId] = useState(null as number | null);
+      const [editPersonForm, setEditPersonForm] = useState({ id: 0, name: '', billable: '', fee: '' } as Person);
 
       const submitEdit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -229,12 +229,12 @@
         e.preventDefault();
         if (!personForm.name.trim()) return;
         onAddPerson({ id: Date.now(), ...personForm });
-        setPersonForm({ id: 0, name: '', billable: '', fee: '' });
+        setPersonForm({ id: 0, name: '', billable: '', fee: '' } as Person);
       };
 
       const submitPersonEdit = (e: React.FormEvent) => {
         e.preventDefault();
-        onUpdatePerson(editingPersonId!, editPersonForm);
+        onUpdatePerson(editingPersonId as number, editPersonForm);
         setEditingPersonId(null);
       };
 
