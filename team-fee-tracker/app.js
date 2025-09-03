@@ -224,13 +224,34 @@ function PeoplePanel({ teams, people, setPeople, selectedTeamId, setSelectedTeam
   ]);
 }
 
-function SummaryPanel({ globalFee }) {
+function SummaryPanel({ teams, people, globalFee }) {
+  const teamSections = teams.map(t => {
+    const members = people.filter(p => p.teamId === t.id);
+    return React.createElement('div', { key: t.id, className: 'mb-2' }, [
+      React.createElement('h3', { className: 'font-semibold' }, t.name),
+      React.createElement(
+        'ul',
+        null,
+        members.map(m =>
+          React.createElement(
+            'li',
+            { key: m.id },
+            `${m.name}${m.fee !== undefined ? ' (' + m.fee + '%)' : ''}`
+          )
+        )
+      )
+    ]);
+  });
+
   return React.createElement('div', { className: 'mt-4' }, [
-    React.createElement('h2', { className: 'text-xl mb-2' }, 'Settings'),
-    React.createElement('div', null, [
+    React.createElement('h2', { className: 'text-xl mb-2' }, 'Summary'),
+    React.createElement('div', { className: 'mb-4' }, [
       React.createElement('label', { className: 'mr-2' }, 'Global Fee %:'),
       React.createElement('span', { className: 'font-semibold' }, `${globalFee}%`)
-    ])
+    ]),
+    teamSections.length
+      ? React.createElement('div', null, teamSections)
+      : React.createElement('p', null, 'No teams added')
   ]);
 }
 
@@ -275,7 +296,7 @@ function App() {
         })
       : null,
     view === 'summary'
-      ? React.createElement(SummaryPanel, { globalFee })
+      ? React.createElement(SummaryPanel, { teams, people, globalFee })
       : null
   ]);
 }
