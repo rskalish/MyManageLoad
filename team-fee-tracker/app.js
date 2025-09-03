@@ -258,12 +258,13 @@ function SummaryPanel({ teams, people, globalFee }) {
 function App() {
   const [teams, setTeams] = useState([]);
   const [people, setPeople] = useState([]);
-  const [globalFee] = useState(() => {
-    const g = parseFloat(localStorage.getItem('globalFee'));
-    return !isNaN(g) ? g : 5;
-  });
   const [view, setView] = useState('teams');
   const [selectedTeamId, setSelectedTeamId] = useState('');
+
+  const globalFee = people.reduce(
+    (sum, p) => sum + (typeof p.fee === 'number' ? p.fee : 0),
+    0
+  );
 
   useEffect(() => {
     const t = JSON.parse(localStorage.getItem('teams') || '[]');
