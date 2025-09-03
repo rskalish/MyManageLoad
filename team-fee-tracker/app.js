@@ -37,6 +37,74 @@ function SummaryBar({ people, globalFee }) {
   );
 }
 
+function DataControls({ teams, people, setTeams, setPeople }) {
+  const fileRef = React.useRef(null);
+
+  const exportData = () => {
+    const blob = new Blob(
+      [JSON.stringify({ teams, people }, null, 2)],
+      { type: 'application/json' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'team-fee-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const onFileChange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const t = Array.isArray(data.teams) ? data.teams : [];
+        const p = Array.isArray(data.people) ? data.people : [];
+        setTeams(t);
+        setPeople(p);
+        localStorage.setItem('teams', JSON.stringify(t));
+        localStorage.setItem('people', JSON.stringify(p));
+      } catch (err) {
+        console.error('Invalid JSON file', err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const importData = () => {
+    if (fileRef.current) fileRef.current.click();
+  };
+
+  return React.createElement('div', { className: 'space-x-2 mb-4' }, [
+    React.createElement(
+      'button',
+      {
+        className: 'px-2 py-1 bg-green-500 text-white rounded',
+        onClick: exportData
+      },
+      'Export JSON'
+    ),
+    React.createElement(
+      'button',
+      {
+        className: 'px-2 py-1 bg-green-500 text-white rounded',
+        onClick: importData
+      },
+      'Import JSON'
+    ),
+    React.createElement('input', {
+      type: 'file',
+      accept: 'application/json',
+      ref: fileRef,
+      style: { display: 'none' },
+      onChange: onFileChange
+    })
+  ]);
+}
+
 function TeamsPanel({ teams, setTeams, people, setPeople }) {
   const [name, setName] = useState('');
   const [editId, setEditId] = useState(null);
@@ -283,6 +351,7 @@ function App() {
 
   return React.createElement('div', { className: 'max-w-2xl mx-auto bg-white p-4 rounded shadow' }, [
     React.createElement(Nav, { view, setView }),
+    React.createElement(DataControls, { teams, people, setTeams, setPeople }),
     React.createElement(SummaryBar, { people, globalFee }),
     view === 'teams'
       ? React.createElement(TeamsPanel, { teams, setTeams, people, setPeople })

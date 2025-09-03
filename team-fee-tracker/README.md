@@ -11,3 +11,4 @@ The app provides:
 - CRUD for people within a selected team
 - Editable management fee percentages (global default, per team, per person)
 - Summary bar showing total headcount and total management fee
+- Export and import data as JSON
